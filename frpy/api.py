@@ -32,7 +32,7 @@ Example
 >>> each(print, sm)
 >>> tick()
 """
-from .core import Stream, clock, this_tick, next_tick
+from .core import Stream, clock
 from .op import fmap, repeat, scan, changed, \
     where, merge, trace, flatten, diff, each, timeout, fmap_async, \
     delay

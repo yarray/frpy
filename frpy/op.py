@@ -267,8 +267,8 @@ def flatten(ss: Stream[Stream[T]]) -> Stream[T]:
 
 def timeout(t: float, responds: Stream[T], s: Stream[S]) -> Stream[float]:
     """ inject a timeout event if t seconds pass after the last
-    event of the source stream and no event from the responding stream has arrived,
-    the source stream and the responding stream can be the same
+    event of the source stream and no event from the responding stream has
+    arrived, the source stream and the responding stream can be the same
 
     Parameters
     ----------

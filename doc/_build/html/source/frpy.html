@@ -1,0 +1,635 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>frpy package &#8212; frpy 0.1 documentation</title>
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">frpy 0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="frpy-package">
+<h1>frpy package<a class="headerlink" href="#frpy-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-frpy.api">
+<span id="frpy-api-module"></span><h2>frpy.api module<a class="headerlink" href="#module-frpy.api" title="Permalink to this headline">¶</a></h2>
+<p>A Simple Implementation for Functional Reactive Programming</p>
+<p><em>Require python Python 3.6+</em></p>
+<p>This module is heavily inspired by flyd (<a class="reference external" href="https://github.com/paldepind/flyd">https://github.com/paldepind/flyd</a>),
+with some important design decisions:</p>
+<ol class="arabic simple">
+<li><dl class="first docutils">
+<dt>The atomic update feature is not ported</dt>
+<dd>The atomic update is quite useful but adds too much complexity in my
+opinion, also the performance gain should not be too much since
+the diamond style dependencies may be avoided in many scenarios</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Racial conditions are handled by a central event loop, a.k.a a clock stream</dt>
+<dd>Python unlike js has no event loop, and the new async API is not easy
+to use in this case. We use the conception of clock when necessary
+with asyncio event loops underhood, per thread has its clock</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>No end stream mechanism is implemented</dt>
+<dd>End streams are useful but may introduce too much dynamism and it has an
+implact on the complexity of implementation. It may be added in the future
+after thorough consideration is taken</dd>
+</dl>
+</li>
+</ol>
+<p class="rubric">Example</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">counter1</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1000</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">counter2</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1000</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">clk</span><span class="p">,</span> <span class="n">tick</span> <span class="o">=</span> <span class="n">clock</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sp</span> <span class="o">=</span> <span class="n">fmap</span><span class="p">(</span><span class="k">lambda</span> <span class="n">_</span><span class="p">:</span> <span class="nb">next</span><span class="p">(</span><span class="n">counter1</span><span class="p">),</span> <span class="n">repeat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">clk</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sn</span> <span class="o">=</span> <span class="n">fmap</span><span class="p">(</span><span class="k">lambda</span> <span class="n">_</span><span class="p">:</span> <span class="nb">next</span><span class="p">(</span><span class="n">counter2</span><span class="p">),</span> <span class="n">repeat</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">clk</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sns</span> <span class="o">=</span> <span class="n">scan</span><span class="p">(</span><span class="k">lambda</span> <span class="n">acc</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">acc</span> <span class="o">+</span> <span class="n">x</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sn</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sm</span> <span class="o">=</span> <span class="n">merge</span><span class="p">([</span><span class="n">sp</span><span class="p">,</span> <span class="n">sns</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">each</span><span class="p">(</span><span class="nb">print</span><span class="p">,</span> <span class="n">sm</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tick</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="module-frpy.core">
+<span id="frpy-core-module"></span><h2>frpy.core module<a class="headerlink" href="#module-frpy.core" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="frpy.core.Stream">
+<em class="property">class </em><code class="descclassname">frpy.core.</code><code class="descname">Stream</code><span class="sig-paren">(</span><em>clock</em>, <em>trace=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/frpy/core.html#Stream"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#frpy.core.Stream" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">typing.Generic</span></code></p>
+<p>Stream: The elemental class of frp</p>
+<p>mainly two operations will be used:</p>
+<ul class="simple">
+<li>s() to get current value</li>
+<li>s(value) to push an event</li>
+</ul>
+<p class="rubric">Example</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">Stream</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">trace</span> <span class="o">=</span> <span class="nb">print</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
+<span class="go">42</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="p">()</span>
+<span class="go">42</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">listen</span><span class="p">(</span><span class="k">lambda</span> <span class="n">_</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+<span class="go">43</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<span class="go">10</span>
+<span class="go">11</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clk</span> <span class="o">=</span> <span class="n">Stream</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s1</span> <span class="o">=</span> <span class="n">Stream</span><span class="p">(</span><span class="n">clk</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s2</span> <span class="o">=</span> <span class="n">Stream</span><span class="p">(</span><span class="n">clk</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s3</span> <span class="o">=</span> <span class="n">Stream</span><span class="p">(</span><span class="n">clk</span><span class="p">,</span> <span class="nb">print</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">clk</span><span class="o">.</span><span class="n">listen</span><span class="p">(</span><span class="k">lambda</span> <span class="n">_</span><span class="p">,</span> <span class="n">t</span><span class="p">:</span> <span class="n">s1</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s1</span><span class="o">.</span><span class="n">listen</span><span class="p">(</span><span class="k">lambda</span> <span class="n">_</span><span class="p">,</span> <span class="n">x1</span><span class="p">:</span> <span class="n">s2</span><span class="p">(</span><span class="n">x1</span> <span class="o">+</span> <span class="mi">10</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s1</span><span class="o">.</span><span class="n">listen</span><span class="p">(</span><span class="k">lambda</span> <span class="n">_</span><span class="p">,</span> <span class="n">x1</span><span class="p">:</span> <span class="n">s3</span><span class="p">(</span><span class="n">x1</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s2</span><span class="o">.</span><span class="n">listen</span><span class="p">(</span><span class="k">lambda</span> <span class="n">_</span><span class="p">,</span> <span class="n">x2</span><span class="p">:</span> <span class="n">s3</span><span class="p">(</span><span class="n">x2</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">clk</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="go">1</span>
+<span class="go">11</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="frpy.core.Stream.listen">
+<code class="descname">listen</code><span class="sig-paren">(</span><em>notify: Callable[[Stream[T], T], None]</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/frpy/core.html#Stream.listen"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#frpy.core.Stream.listen" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="frpy.core.clock">
+<code class="descclassname">frpy.core.</code><code class="descname">clock</code><span class="sig-paren">(</span><em>loop: asyncio.events.AbstractEventLoop = None</em>, <em>time_res=0</em><span class="sig-paren">)</span> &#x2192; Tuple[frpy.core.Stream[float], Callable[None]]<a class="reference internal" href="../_modules/frpy/core.html#clock"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#frpy.core.clock" title="Permalink to this definition">¶</a></dt>
+<dd><p>create a clock stream producing the real world time,
+using an infinite async loop</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>loop</strong> (<em>asyncio.AbstractEventLoop, optional</em>) – async event loop</li>
+<li><strong>time_res</strong> (<em>int, optional</em>) – seconds to sleep before next tick, set it to positive decimals
+if only performance issue exists</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">A clock stream and a function to start the clock (forever)</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Tuple[<a class="reference internal" href="#frpy.core.Stream" title="frpy.core.Stream">Stream</a>[float], Callable[[], None]]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="frpy.core.combine">
+<code class="descclassname">frpy.core.</code><code class="descname">combine</code><span class="sig-paren">(</span><em>fn: Callable[[List[frpy.core.Stream[Any]], frpy.core.Stream[T], frpy.core.Stream[Any], T], None], deps: List[frpy.core.Stream[Any]]</em><span class="sig-paren">)</span> &#x2192; frpy.core.Stream[T]<a class="reference internal" href="../_modules/frpy/core.html#combine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#frpy.core.combine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Combine several upstream streams into a new one</p>
+<p class="rubric">Example</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clk</span> <span class="o">=</span> <span class="n">Stream</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s1</span> <span class="o">=</span> <span class="n">Stream</span><span class="p">(</span><span class="n">clk</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s2</span> <span class="o">=</span> <span class="n">Stream</span><span class="p">(</span><span class="n">clk</span><span class="p">)</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first">
+<li><p class="first"><strong>fn</strong> (<em>Callable[[List[Stream[Any]], Stream[T], Stream[Any]], None]</em>) –</p>
+<dl class="docutils">
+<dt>combining function: (dependents, self, src) -&gt; None</dt>
+<dd><ul class="first last simple">
+<li>dependents</li>
+<li>self: The returned stream</li>
+<li>src: The stream who triggers the updating</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first"><strong>deps</strong> (<em>List[Stream[Any]]</em>) – dependent streams</p>
+</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#frpy.core.Stream" title="frpy.core.Stream">Stream</a>[T]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-frpy.fp">
+<span id="frpy-fp-module"></span><h2>frpy.fp module<a class="headerlink" href="#module-frpy.fp" title="Permalink to this headline">¶</a></h2>
+<p>functional programming utilities to use with frp api</p>
+<dl class="function">
+<dt id="frpy.fp.const">
+<code class="descclassname">frpy.fp.</code><code class="descname">const</code><span class="sig-paren">(</span><em>value</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/frpy/fp.html#const"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#frpy.fp.const" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="frpy.fp.pipe">
+<code class="descclassname">frpy.fp.</code><code class="descname">pipe</code><span class="sig-paren">(</span><em>*funcs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/frpy/fp.html#pipe"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#frpy.fp.pipe" title="Permalink to this definition">¶</a></dt>
+<dd><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">add1</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">add2</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pipe</span><span class="p">(</span><span class="n">add1</span><span class="p">,</span> <span class="n">add2</span><span class="p">)(</span><span class="mi">2</span><span class="p">)</span>
+<span class="go">5</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="frpy.fp.soft">
+<code class="descclassname">frpy.fp.</code><code class="descname">soft</code><span class="sig-paren">(</span><em>fn</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/frpy/fp.html#soft"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#frpy.fp.soft" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-frpy.op">
+<span id="frpy-op-module"></span><h2>frpy.op module<a class="headerlink" href="#module-frpy.op" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="frpy.op.changed">
+<code class="descclassname">frpy.op.</code><code class="descname">changed</code><span class="sig-paren">(</span><em>eq_fn: Callable[[T, T], bool], s: frpy.core.Stream[T]</em><span class="sig-paren">)</span> &#x2192; frpy.core.Stream[T]<a class="reference internal" href="../_modules/frpy/op.html#changed"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#frpy.op.changed" title="Permalink to this definition">¶</a></dt>
+<dd><p>output event when new event is different from the last</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>eq_fn</strong> (<em>Callable[[T, T], bool]</em>) – function to determine whether 2 evengs are equal</li>
+<li><strong>s</strong> (<em>Stream[T]</em>) – source stream</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#frpy.core.Stream" title="frpy.core.Stream">Stream</a>[T]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="frpy.op.delay">
+<code class="descclassname">frpy.op.</code><code class="descname">delay</code><span class="sig-paren">(</span><em>t: float, s: frpy.core.Stream[T]</em><span class="sig-paren">)</span> &#x2192; frpy.core.Stream[T]<a class="reference internal" href="../_modules/frpy/op.html#delay"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#frpy.op.delay" title="Permalink to this definition">¶</a></dt>
+<dd><p>delay every events by specific time
+when delayed t is 0, delay every events by a tick</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>t</strong> (<em>float</em>) – delayed seconds</li>
+<li><strong>s</strong> (<em>Stream[T]</em>) – source stream</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#frpy.core.Stream" title="frpy.core.Stream">Stream</a>[T]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="frpy.op.diff">
+<code class="descclassname">frpy.op.</code><code class="descname">diff</code><span class="sig-paren">(</span><em>fn: Callable[[T, T], S], init: T, s: frpy.core.Stream[T]</em><span class="sig-paren">)</span> &#x2192; frpy.core.Stream[S]<a class="reference internal" href="../_modules/frpy/op.html#diff"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#frpy.op.diff" title="Permalink to this definition">¶</a></dt>
+<dd><p>stream of events generated using neighbouring events</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>fn</strong> (<em>Callable[[T, T], S]</em>) – [description]</li>
+<li><strong>init</strong> (<em>T</em>) – [description]</li>
+<li><strong>s</strong> (<em>Stream[T]</em>) – [description]</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">[description]</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#frpy.core.Stream" title="frpy.core.Stream">Stream</a>[S]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="frpy.op.each">
+<code class="descclassname">frpy.op.</code><code class="descname">each</code><span class="sig-paren">(</span><em>fn: Callable[T, None], s: frpy.core.Stream[T]</em><span class="sig-paren">)</span> &#x2192; None<a class="reference internal" href="../_modules/frpy/op.html#each"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#frpy.op.each" title="Permalink to this definition">¶</a></dt>
+<dd><p>for each event perform an unpure action</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>fn</strong> (<em>Callable[[T], None]</em>) – the action</li>
+<li><strong>s</strong> (<em>Stream[T]</em>) – source stream</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="frpy.op.flatten">
+<code class="descclassname">frpy.op.</code><code class="descname">flatten</code><span class="sig-paren">(</span><em>ss: frpy.core.Stream[frpy.core.Stream[T]]</em><span class="sig-paren">)</span> &#x2192; frpy.core.Stream[T]<a class="reference internal" href="../_modules/frpy/op.html#flatten"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#frpy.op.flatten" title="Permalink to this definition">¶</a></dt>
+<dd><p>redirect every event in stream of streams to a flattened stream</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>ss</strong> (<em>Stream[Stream[T]]</em>) – source stream</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="#frpy.core.Stream" title="frpy.core.Stream">Stream</a>[T]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="frpy.op.fmap">
+<code class="descclassname">frpy.op.</code><code class="descname">fmap</code><span class="sig-paren">(</span><em>fn: Callable[T, S], s: frpy.core.Stream[T]</em><span class="sig-paren">)</span> &#x2192; frpy.core.Stream[S]<a class="reference internal" href="../_modules/frpy/op.html#fmap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#frpy.op.fmap" title="Permalink to this definition">¶</a></dt>
+<dd><p>apply function to every event of a stream
+map operator for Stream the functor</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>fn</strong> (<em>Callable[[T], S]</em>) – function to process a single event</li>
+<li><strong>s</strong> (<em>Stream[T]</em>) – source stream</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#frpy.core.Stream" title="frpy.core.Stream">Stream</a>[S]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="frpy.op.fmap_async">
+<code class="descclassname">frpy.op.</code><code class="descname">fmap_async</code><span class="sig-paren">(</span><em>fn: Callable[AsyncIterator[T], AsyncIterator[T]], s: frpy.core.Stream[T]</em><span class="sig-paren">)</span> &#x2192; frpy.core.Stream[T]<a class="reference internal" href="../_modules/frpy/op.html#fmap_async"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#frpy.op.fmap_async" title="Permalink to this definition">¶</a></dt>
+<dd><p>map async generator transformer fn to stream transformer</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>fn</strong> (<em>Callable[[AsyncIterator[T]], AsyncIterator[T]]</em>) – function from async generator to async generator</li>
+<li><strong>s</strong> (<em>Stream[T]</em>) – source stream</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">result stream</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#frpy.core.Stream" title="frpy.core.Stream">Stream</a>[T]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="frpy.op.merge">
+<code class="descclassname">frpy.op.</code><code class="descname">merge</code><span class="sig-paren">(</span><em>ss: List[frpy.core.Stream[Any]], topics: List[Any] = None</em><span class="sig-paren">)</span> &#x2192; frpy.core.Stream[Any]<a class="reference internal" href="../_modules/frpy/op.html#merge"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#frpy.op.merge" title="Permalink to this definition">¶</a></dt>
+<dd><p>merge multiple streams</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>ss</strong> (<em>List[Stream[Any]]</em>) – streams to be merged</li>
+<li><strong>topics</strong> (<em>List[Any], optional</em>) – if provided, events becomes tuples like (topic, original event),
+the i-th topic is applied to the i-th stream</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#frpy.core.Stream" title="frpy.core.Stream">Stream</a>[Any]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="frpy.op.repeat">
+<code class="descclassname">frpy.op.</code><code class="descname">repeat</code><span class="sig-paren">(</span><em>interval: float, clock: frpy.core.Stream[T]</em><span class="sig-paren">)</span> &#x2192; frpy.core.Stream[T]<a class="reference internal" href="../_modules/frpy/op.html#repeat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#frpy.op.repeat" title="Permalink to this definition">¶</a></dt>
+<dd><p>repeatedly inject unix timestamp</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>interval</strong> (<em>float</em>) – interval between events</li>
+<li><strong>clock</strong> (<em>Stream[T]</em>) – clock stream of world</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#frpy.core.Stream" title="frpy.core.Stream">Stream</a>[T]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="frpy.op.scan">
+<code class="descclassname">frpy.op.</code><code class="descname">scan</code><span class="sig-paren">(</span><em>fn: Callable[[S, T], S], init: S, s: frpy.core.Stream[T]</em><span class="sig-paren">)</span> &#x2192; frpy.core.Stream[S]<a class="reference internal" href="../_modules/frpy/op.html#scan"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#frpy.op.scan" title="Permalink to this definition">¶</a></dt>
+<dd><p>streams whose event is an accumulation created from the arrived event
+and the previous accumulation</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>fn</strong> (<em>Callable[[S, T], S]</em>) – accumulate function, from previous accumulation and arrived event
+to result event</li>
+<li><strong>init</strong> (<em>S</em>) – initial value of the accumulation</li>
+<li><strong>s</strong> (<em>Stream[T]</em>) – source stream</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#frpy.core.Stream" title="frpy.core.Stream">Stream</a>[S]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="frpy.op.timeout">
+<code class="descclassname">frpy.op.</code><code class="descname">timeout</code><span class="sig-paren">(</span><em>t: float, responds: frpy.core.Stream[T], s: frpy.core.Stream[S]</em><span class="sig-paren">)</span> &#x2192; frpy.core.Stream[float]<a class="reference internal" href="../_modules/frpy/op.html#timeout"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#frpy.op.timeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>inject a timeout event if t seconds pass after the last
+event of the source stream and no event from the responding stream has
+arrived, the source stream and the responding stream can be the same</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>t</strong> (<em>float</em>) – limit of elapsed time</li>
+<li><strong>responds</strong> (<em>Stream[T]</em>) – responding stream to s</li>
+<li><strong>s</strong> (<em>Stream[S]</em>) – source stream (request stream)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">timestamps of timeout</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#frpy.core.Stream" title="frpy.core.Stream">Stream</a>[float]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="frpy.op.trace">
+<code class="descclassname">frpy.op.</code><code class="descname">trace</code><span class="sig-paren">(</span><em>key_fn: Callable[T, S], stale: float, s: frpy.core.Stream[T]</em><span class="sig-paren">)</span> &#x2192; frpy.core.Stream[frpy.core.Stream[T]]<a class="reference internal" href="../_modules/frpy/op.html#trace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#frpy.op.trace" title="Permalink to this definition">¶</a></dt>
+<dd><p>trace events with the same keys, from a mono stream
+to a stream of streams, each is a tracing stream generating
+when the first event with the key arrives</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>key_fn</strong> (<em>Callable[[T], S]</em>) – function to generate key from the event</li>
+<li><strong>stale</strong> (<em>float</em>) – the seconds before a stream gets trimmed if no events arrived</li>
+<li><strong>s</strong> (<em>Stream[T]</em>) – source stream</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#frpy.core.Stream" title="frpy.core.Stream">Stream</a>[<a class="reference internal" href="#frpy.core.Stream" title="frpy.core.Stream">Stream</a>[T]]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="frpy.op.where">
+<code class="descclassname">frpy.op.</code><code class="descname">where</code><span class="sig-paren">(</span><em>fn: Callable[T, bool], s: frpy.core.Stream[T]</em><span class="sig-paren">)</span> &#x2192; frpy.core.Stream[T]<a class="reference internal" href="../_modules/frpy/op.html#where"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#frpy.op.where" title="Permalink to this definition">¶</a></dt>
+<dd><p>preserve events making fn to be true</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>fn</strong> (<em>Callable[[T], bool]</em>) – when fn is true then preserve the event</li>
+<li><strong>s</strong> (<em>Stream[T]</em>) – source stream</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#frpy.core.Stream" title="frpy.core.Stream">Stream</a>[T]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="frpy.op.window">
+<code class="descclassname">frpy.op.</code><code class="descname">window</code><span class="sig-paren">(</span><em>n: int, s: frpy.core.Stream[T]</em><span class="sig-paren">)</span> &#x2192; frpy.core.Stream[List[T]]<a class="reference internal" href="../_modules/frpy/op.html#window"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#frpy.op.window" title="Permalink to this definition">¶</a></dt>
+<dd><p>convert to stream of sliding windows of events</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>n</strong> (<em>int</em>) – width of the sliding window</li>
+<li><strong>s</strong> (<em>Stream[T]</em>) – source stream</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">[<a class="reference internal" href="#frpy.core.Stream" title="frpy.core.Stream">Stream</a>[List[T]]]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-frpy">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-frpy" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">frpy package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-frpy.api">frpy.api module</a></li>
+<li><a class="reference internal" href="#module-frpy.core">frpy.core module</a></li>
+<li><a class="reference internal" href="#module-frpy.fp">frpy.fp module</a></li>
+<li><a class="reference internal" href="#module-frpy.op">frpy.op module</a></li>
+<li><a class="reference internal" href="#module-frpy">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/source/frpy.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">frpy 0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, yarray.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.8.2.
+    </div>
+  </body>
+</html>
