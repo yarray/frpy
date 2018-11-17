@@ -11,7 +11,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
 
 from frpy.api import Stream, fmap, repeat, scan, changed, \
     where, merge, trace, flatten, diff, each, timeout, fmap_async, \
-    clock, this_tick, next_tick  # noqa: E402
+    clock  # noqa: E402
 from frpy.fp import const  # noqa: E402
 
 
@@ -56,25 +56,24 @@ def amain():
     tick()
 
 
-def amain2():
+def tmain():
     def feed(clk, s):
+        s(5)
         time.sleep(1)
-        next_tick(clk, lambda: s(5))
-        next_tick(clk, lambda: s(4))
-        next_tick(clk, lambda: s(3))
-        next_tick(clk, lambda: s(2))
-        next_tick(clk, lambda: s(1))
-
-    async def print_stream(s):
-        async for value in s:
-            print(value)
-            yield
+        s(4)
+        time.sleep(1)
+        s(3)
+        time.sleep(1)
+        s(2)
+        time.sleep(1)
+        s(1)
 
     clk, tick = clock()
 
     s: Stream[Any] = Stream(clk)
-    fmap_async(print_stream, s)
+    each(print, s)
     threading.Thread(target=feed, args=[clk, s]).start()
+    time.sleep(2)
     tick()
 
 
@@ -203,8 +202,8 @@ def action_q():
 if __name__ == '__main__':
     # main()
     # amain()
-    # amain2()
+    tmain()
     # compl()
     # compl2()
     # compl3()
-    action_q()
+    # action_q()

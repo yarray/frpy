@@ -98,63 +98,6 @@ class Stream(Generic[T]):
         self.listeners.append(notify)
 
 
-# time scheduling
-def this_tick(clock: Stream[float], fn: Callable[[], None]):
-    """ schedule fn to run at the end of this tick, NOT thread-safe
-
-    Example
-    -------
-    >>> clk = Stream(None)
-    >>> def callback(_, value):
-    ...     this_tick(clk, lambda: print(value))
-    ...     print(42)
-    >>> clk.listen(callback)
-    >>> clk(0)
-    42
-    0
-
-    Parameters
-    ----------
-    clock : Stream[float]
-    fn : Callable[[], None]
-        The function to be call at the end of this tick
-    """
-
-    clock.listeners.append(_once(lambda *_: fn()))
-
-
-def next_tick(clock: Stream[float], fn: Callable[[], None]):
-    """
-    schedule fn to run at next tick, thread-safe
-
-    Example
-    -------
-    >>> clk = Stream(None)
-    >>> def callback(_, value):
-    ...     next_tick(clk, lambda: print(value))
-    ...     print(42)
-    >>> clk.listen(callback)
-    >>> clk(0)
-    42
-    >>> clk(1)
-    42
-    0
-    >>> clk(2)
-    42
-    1
-
-    Parameters
-    ----------
-    clock : Stream[float]
-    fn : Callable[[], None]
-        The function to be call when the next tick arrived
-    """
-    now = clock()
-
-    clock.listeners.append(
-        _once(lambda *_: fn(), lambda _, value: value > now))
-
-
 def combine(fn: Callable[[List[Stream[Any]], Stream[T], Stream[Any], T], None],
             deps: List[Stream[Any]]) -> Stream[T]:
     """ Combine several upstream streams into a new one
