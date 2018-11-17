@@ -14,6 +14,9 @@
 #
 import os
 import sys
+from sphinx.domains.python import PythonDomain
+from recommonmark.parser import CommonMarkParser
+
 sys.path.insert(0, os.path.abspath('../'))
 
 # -- Project information -----------------------------------------------------
@@ -37,8 +40,9 @@ release = '0.1'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc', 'sphinx.ext.coverage', 'sphinx.ext.imgmath',
-    'sphinx.ext.viewcode', 'sphinx.ext.githubpages', 'sphinx.ext.napoleon'
+    'sphinx.ext.autodoc', 'sphinx.ext.autosummary', 'sphinx.ext.doctest',
+    'sphinx.ext.coverage', 'sphinx.ext.imgmath', 'sphinx.ext.viewcode',
+    'sphinx.ext.githubpages', 'sphinx.ext.napoleon'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -46,8 +50,6 @@ templates_path = ['_templates']
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
-#
-# source_suffix = ['.rst', '.md']
 source_suffix = '.rst'
 
 # The master toctree document.
@@ -165,3 +167,20 @@ epub_exclude_files = ['search.html']
 napoleon_google_docstring = False
 napoleon_use_param = False
 napoleon_use_ivar = True
+autodoc_default_flags = [
+    'functions', 'members', 'inherited-members', 'imported-members'
+]
+
+
+# silent multiple cross reference problem
+class PatchedPythonDomain(PythonDomain):
+    def resolve_xref(self, env, fromdocname, builder, typ, target, node,
+                     contnode):
+        if 'refspecific' in node:
+            del node['refspecific']
+        return super(PatchedPythonDomain, self).resolve_xref(
+            env, fromdocname, builder, typ, target, node, contnode)
+
+
+def setup(sphinx):
+    sphinx.override_domain(PatchedPythonDomain)

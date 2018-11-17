@@ -17,6 +17,7 @@ def soft(fn):
 
 def pipe(*funcs):
     '''
+    >>> from frpy.fp import pipe
     >>> add1 = lambda x: x + 1
     >>> add2 = lambda x: x + 2
     >>> pipe(add1, add2)(2)

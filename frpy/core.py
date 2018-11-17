@@ -1,3 +1,7 @@
+"""
+ .. testsetup::
+       from frpy.api import Stream
+"""
 from typing import TypeVar, Generic, List, Callable, Tuple, Any
 import asyncio
 import time
@@ -27,6 +31,7 @@ class Stream(Generic[T]):
 
     Example
     -------
+    >>> from frpy.api import Stream
     >>> s = Stream(None)
     >>> s.trace = print
     >>> s(42)
