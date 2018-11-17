@@ -3,7 +3,7 @@
 
 *Require python Python 3.6+*
 
-This module is heavily inspired by [flyd](https://github.com/paldepind/flyd),
+This module is heavily inspired by flyd (https://github.com/paldepind/flyd),
 with some important design decisions:
 
 1. The atomic update feature is not ported
@@ -19,19 +19,18 @@ with some important design decisions:
     implact on the complexity of implementation. It may be added in the future
     after thorough consideration is taken
 
-Example usage:
+Example
+-------
 
-counter1 = iter(range(1, 1000))
-counter2 = iter(range(-1, -1000, -1))
-
-clk, tick = clock()
-sp = fmap(lambda _: next(counter1), repeat(1, clk))
-sn = fmap(lambda _: next(counter2), repeat(2, clk))
-sns = scan(lambda acc, x: acc + x, 0, sn)
-sm = merge([sp, sns])
-each(print, sm)
-
-tick()
+>>> counter1 = iter(range(1, 1000))
+>>> counter2 = iter(range(-1, -1000, -1))
+>>> clk, tick = clock()
+>>> sp = fmap(lambda _: next(counter1), repeat(1, clk))
+>>> sn = fmap(lambda _: next(counter2), repeat(2, clk))
+>>> sns = scan(lambda acc, x: acc + x, 0, sn)
+>>> sm = merge([sp, sns])
+>>> each(print, sm)
+>>> tick()
 """
 from .core import Stream, clock, this_tick, next_tick
 from .op import fmap, repeat, scan, changed, \

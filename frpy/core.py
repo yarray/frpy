@@ -6,13 +6,27 @@ T = TypeVar('T')
 S = TypeVar('S')
 
 
+def _once(f: Callable, cond=lambda *_: True):
+    ''' make the function as stale after it's called extractly once '''
+
+    def g(*args, **kw):
+        if cond(*args, **kw):
+            f(*args, **kw)
+            g.stale = True
+
+    return g
+
+
 class Stream(Generic[T]):
     """ Stream: The elemental class of frp
 
-    provide two operations:
-    - s() to get current value
-    - s(value) to push an event
+    mainly two operations will be used:
 
+    * s() to get current value
+    * s(value) to push an event
+
+    Example
+    -------
     >>> s = Stream(None)
     >>> s.trace = print
     >>> s(42)
@@ -59,26 +73,24 @@ class Stream(Generic[T]):
         to the subsequent tick so that concurrency issues will not bother.
         """
 
-        def notify_all(*_):
+        def update(*_):
+            if self.trace is not None:
+                self.trace(value)
+            self.value = value
             self.listeners = [
-                f for f in self.listeners if not getattr(f, 'once', False)
+                f for f in self.listeners if not getattr(f, 'stale', False)
             ]
             for f in self.listeners:
                 f(self, value)
-
-        notify_all.once = True
 
         if value is None:
             return self.value
 
         else:
-            if self.trace is not None:
-                self.trace(value)
-            self.value = value
             if self.clock == self:
-                notify_all()
+                update()
             else:
-                self.clock.listeners.append(notify_all)
+                self.clock.listeners.append(_once(update))
 
     def listen(self, notify: Callable[['Stream[T]', T], None]):
         if self.value is not None:
@@ -90,12 +102,8 @@ class Stream(Generic[T]):
 def this_tick(clock: Stream[float], fn: Callable[[], None]):
     """ schedule fn to run at the end of this tick, NOT thread-safe
 
-    Parameters
-    ----------
-    clock : Stream[float]
-    fn : Callable[[], None]
-        The function to be call at the end of this tick
-
+    Example
+    -------
     >>> clk = Stream(None)
     >>> def callback(_, value):
     ...     this_tick(clk, lambda: print(value))
@@ -104,25 +112,23 @@ def this_tick(clock: Stream[float], fn: Callable[[], None]):
     >>> clk(0)
     42
     0
+
+    Parameters
+    ----------
+    clock : Stream[float]
+    fn : Callable[[], None]
+        The function to be call at the end of this tick
     """
 
-    def g(src, value):
-        fn()
-
-    g.once = True  # type: ignore
-    clock.listeners.append(g)
+    clock.listeners.append(_once(lambda *_: fn()))
 
 
 def next_tick(clock: Stream[float], fn: Callable[[], None]):
     """
     schedule fn to run at next tick, thread-safe
 
-    Parameters
-    ----------
-    clock : Stream[float]
-    fn : Callable[[], None]
-        The function to be call when the next tick arrived
-
+    Example
+    -------
     >>> clk = Stream(None)
     >>> def callback(_, value):
     ...     next_tick(clk, lambda: print(value))
@@ -133,20 +139,31 @@ def next_tick(clock: Stream[float], fn: Callable[[], None]):
     >>> clk(1)
     42
     0
+    >>> clk(2)
+    42
+    1
+
+    Parameters
+    ----------
+    clock : Stream[float]
+    fn : Callable[[], None]
+        The function to be call when the next tick arrived
     """
     now = clock()
 
-    def g(src, value):
-        if value > now:
-            g.once = True
-            fn()
-
-    clock.listeners.append(g)
+    clock.listeners.append(
+        _once(lambda *_: fn(), lambda _, value: value > now))
 
 
 def combine(fn: Callable[[List[Stream[Any]], Stream[T], Stream[Any], T], None],
             deps: List[Stream[Any]]) -> Stream[T]:
     """ Combine several upstream streams into a new one
+
+    Example
+    -------
+    >>> clk = Stream(None)
+    >>> s1 = Stream(clk)
+    >>> s2 = Stream(clk)
 
     Parameters
     ----------
@@ -161,10 +178,6 @@ def combine(fn: Callable[[List[Stream[Any]], Stream[T], Stream[Any], T], None],
     Returns
     -------
     Stream[T]
-
-    >>> clk = Stream(None)
-    >>> s1 = Stream(clk)
-    >>> s2 = Stream(clk)
     """
     s: Stream[T] = Stream(deps[0].clock)
 

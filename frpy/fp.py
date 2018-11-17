@@ -8,6 +8,13 @@ def const(value):
     return f
 
 
+def soft(fn):
+    def f(*args, **kw):
+        return fn()
+
+    return f
+
+
 def pipe(*funcs):
     '''
     >>> add1 = lambda x: x + 1
