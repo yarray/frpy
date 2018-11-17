@@ -15,7 +15,6 @@
 import os
 import sys
 from sphinx.domains.python import PythonDomain
-from recommonmark.parser import CommonMarkParser
 
 sys.path.insert(0, os.path.abspath('../'))
 

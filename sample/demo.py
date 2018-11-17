@@ -9,19 +9,16 @@ from functools import partial as bind
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
 
-from frpy.api import Stream, fmap, repeat, scan, changed, \
+from frpy.api import Stream, fmap, repeat, sequence, scan, changed, \
     where, merge, trace, flatten, diff, each, timeout, fmap_async, \
     clock  # noqa: E402
 from frpy.fp import const  # noqa: E402
 
 
 def main():
-    counter1 = iter(range(1, 1000))
-    counter2 = iter(range(-1, -1000, -1))
-
     clk, tick = clock()
-    sp = fmap(lambda _: next(counter1), repeat(1, clk))
-    sn = fmap(lambda _: next(counter2), repeat(2, clk))
+    sp = sequence(1, iter(range(1, 1000)), clk)
+    sn = sequence(2, iter(range(-1, -1000, -1)), clk)
     sns = scan(lambda acc, x: acc + x, 0, sn)
     spu = changed(lambda x, y: x == y, sp)
     spuf = where(lambda x: x % 3 != 0, spu)
@@ -200,9 +197,9 @@ def action_q():
 
 
 if __name__ == '__main__':
-    # main()
+    main()
     # amain()
-    tmain()
+    # tmain()
     # compl()
     # compl2()
     # compl3()

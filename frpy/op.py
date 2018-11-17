@@ -2,7 +2,7 @@ import time
 import math
 import asyncio
 from typing import Callable, TypeVar, Any, Generic, Union  # noqa F401
-from typing import Tuple, List, Dict, Deque, AsyncIterator, Awaitable, Deque  # noqa F401
+from typing import Tuple, List, Dict, Deque, AsyncIterator, Awaitable, Deque, Iterator  # noqa F401
 from collections import deque
 from .core import Stream, combine
 
@@ -24,11 +24,42 @@ def repeat(interval: float, clock: Stream[T]) -> Stream[T]:
     Returns
     -------
     Stream[T]
+        every interval time units, inject clock event
     """
 
     def g(deps, this, src, value):
         if this() is None or value - this() >= interval:
             return value
+
+    return combine(g, [clock])
+
+
+def sequence(interval: float, it: Iterator[S], clock: Stream[T]) -> Stream[S]:
+    """ inject incremental numbers from 0
+
+    Parameters
+    ----------
+    interval : float
+        interval between events
+    it : Iterator[S]
+        the iterator to generate values
+    clock : Stream[T]
+        clock stream of world
+
+    Returns
+    -------
+    Stream[S]
+        every interval time units, bumps an event
+    """
+    buffer = [clock()]
+
+    def g(deps, this, src, value):
+        if buffer[0] is None or value - buffer[0] >= interval:
+            try:
+                buffer[0] = value
+                return next(it)
+            except StopIteration:
+                pass
 
     return combine(g, [clock])
 
