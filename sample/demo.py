@@ -12,7 +12,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
 from frpy.api import Stream, fmap, repeat, sequence, scan, changed, \
     where, merge, trace, flatten, diff, each, timeout, fmap_async, \
     clock  # noqa: E402
-from frpy.fp import const  # noqa: E402
+from frpy.fp import const, soft  # noqa: E402
 
 
 def main():
@@ -89,39 +89,40 @@ def timing():
     tick()
 
 
+# if the sum of a stream is greater than 5, then flush, add from 0,
+# if after 10 seconds the goal is not reached, then flush fail, add from 0
 value_thres = 3
 time_thres = 1.2
 
 
 def compl():
-    # if the sum of a stream is greater than 5, then flush, add from 0,
-    # if after 10 seconds the goal is not reached, then flush fail, add from 0
+    # init the clock
     clk, tick = clock()
-    sp = fmap(lambda _: random.random(), repeat(0.2, clk))
+
+    # construct streams
+    sp = fmap(soft(random.random), repeat(0.2, clk))
     term = Stream(clk)
-
-    def batch(acc, v):
-        if v < 0:
-            return 0
-        else:
-            return acc + v
-
-    interrupt = fmap(const(-1), timeout(time_thres, term, term))
+    interrupt = timeout(time_thres, term, term)
     value = merge([sp, fmap(const(-1), term)])
-    acc = scan(batch, 0, value)
-    met = changed(lambda x, y: x is None or y <= value_thres, acc)
+    acc = scan(lambda acc, v: acc + v if v >= 0 else 0, 0, value)
+    met = changed(lambda _, y: y <= value_thres, acc)
     each(term, merge([met, interrupt]))
-    acc.trace = print_s('acc')
+
+    # hook to print trace
+    acc.trace = print
     met.trace = bind(print, 'met!')
     interrupt.trace = bind(print, 'fail!')
+
+    # start clock
     tick()
 
 
 def compl2():
     # compl using async transformation
     clk, tick = clock()
-    sp = fmap(lambda _: random.random(), repeat(0.2, clk))
+    sp = fmap(soft(random.random), repeat(0.2, clk))
 
+    # aysnc generator transformation
     async def fn(s):
         acc = 0
         last = math.inf
@@ -140,7 +141,10 @@ def compl2():
                 acc += v
                 yield acc
 
+    # map the transformation over async generators to that over streams
     res = fmap_async(fn, merge([clk, sp], ['clock', 'value']))
+
+    # hook to print trace
     res.trace = print
     tick()
 
@@ -197,10 +201,10 @@ def action_q():
 
 
 if __name__ == '__main__':
-    main()
+    # main()
     # amain()
     # tmain()
-    # compl()
+    compl()
     # compl2()
     # compl3()
     # action_q()

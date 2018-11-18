@@ -31,6 +31,8 @@ class Stream(Generic[T]):
 
     Example
     -------
+    Basic query/push operations
+
     >>> from frpy.api import Stream
     >>> s = Stream(None)
     >>> s.trace = print
@@ -38,22 +40,9 @@ class Stream(Generic[T]):
     42
     >>> s()
     42
-    >>> s.listen(lambda _, x: print(x + 1))
-    43
+    >>> s.listeners.append(lambda _, x: print(x + 1))
     >>> s(10)
     10
-    11
-
-    >>> clk = Stream(None)
-    >>> s1 = Stream(clk)
-    >>> s2 = Stream(clk)
-    >>> s3 = Stream(clk, print)
-    >>> clk.listen(lambda _, t: s1(t))
-    >>> s1.listen(lambda _, x1: s2(x1 + 10))
-    >>> s1.listen(lambda _, x1: s3(x1))
-    >>> s2.listen(lambda _, x2: s3(x2))
-    >>> clk(1)
-    1
     11
     """
 
@@ -109,6 +98,7 @@ def combine(fn: Callable[[List[Stream[Any]], Stream[T], Stream[Any], T], None],
 
     Example
     -------
+    Update
     >>> clk = Stream(None)
     >>> s1 = Stream(clk)
     >>> s2 = Stream(clk)
@@ -156,7 +146,7 @@ def clock(loop: asyncio.AbstractEventLoop = None,
     Returns
     -------
     Tuple[Stream[float], Callable[[], None]]
-        A clock stream and a function to start the clock (forever)
+        A clock stream and a function to start the clock (run forever)
     """
     loop = loop or asyncio.get_event_loop()
     clk: Stream[float] = Stream(None)
