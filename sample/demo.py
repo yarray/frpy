@@ -153,22 +153,20 @@ def compl3():
     clk, tick = clock()
     sp = fmap(lambda _: random.random(), repeat(0.2, clk))
     events = merge([clk, sp], ['clock', 'value'])
-    out = Stream(clk)
-    out.trace = print
 
     def update(state: Tuple[float, float], event) -> Tuple[float, float]:
         channel, data = event
         start_at, acc = state
         if channel == 'clock':
             if data - start_at > time_thres:
-                out('failed')
+                print('failed')
                 return (data, 0)
             return state
         if channel == 'value':
             new_value = acc + data
-            out(new_value)
+            print(new_value)
             if new_value >= value_thres:
-                out('met')
+                print('met')
                 return (time.time(), 0)
             return (start_at, new_value)
         else:
@@ -204,7 +202,7 @@ if __name__ == '__main__':
     # main()
     # amain()
     # tmain()
-    compl()
+    # compl()
     # compl2()
-    # compl3()
+    compl3()
     # action_q()

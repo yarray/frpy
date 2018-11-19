@@ -155,28 +155,26 @@ Method 3: state reducer approach resembling React and Elm
     sp = fmap(soft(random.random), repeat(0.2, clk))
     events = merge([clk, sp], ['clock', 'value'])
 
-    # set output stream and hook print
-    out = Stream(clk, trace=print)
-
-    # the reducer function to update state, impure for convenience
+    # the reducer function to update state, print directly for convenience
     def update(state: Tuple[float, float], event) -> Tuple[float, float]:
         channel, data = event
         start_at, acc = state
         if channel == 'clock':
             if data - start_at > time_thres:
-                out('failed')
+                print('failed')
                 return (data, 0)
             return state
         if channel == 'value':
             new_value = acc + data
-            out(new_value)
+            print(new_value)
             if new_value >= value_thres:
-                out('met')
+                print('met')
                 return (time.time(), 0)
             return (start_at, new_value)
         else:
             return state
 
+    # we do not use states so just print changes in reducer
     scan(update, (time.time(), 0), events)
     tick()
 
