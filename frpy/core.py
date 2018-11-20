@@ -147,10 +147,10 @@ def clock(loop: asyncio.AbstractEventLoop = None,
     clk: Stream[float] = Stream(None)
     clk.clock = clk
 
-    async def feed_clock(time_block):
+    async def feed_clock(time_res):
         while True:
             clk(time.time())
-            await asyncio.sleep(time_block)
+            await asyncio.sleep(time_res)
 
     def run():
         loop.run_until_complete(feed_clock(time_res))
