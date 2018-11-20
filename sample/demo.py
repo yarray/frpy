@@ -62,22 +62,19 @@ async def transform(s):
 def amain_stop():
     # TODO: can demo, but very hard to test since finite clock cannot
     # gurantee all events are triggered
-    # should_stop = Stream(None)
-    # clk, tick = clock(should_stop=should_stop)
-    # s = Stream(clk)
-    s = Stream(None)
+    clk, tick = clock()
+    s = Stream(clk)
     s1 = fmap_async(transform, s)
     s1.hook = print
-    # import threading
-    # t = threading.Thread(target=tick)
-    # t.start()
+    import threading
+    t = threading.Thread(target=tick, args=(5, ))
+    t.start()
     s(1)  # 2
     s(10)  # no print
     s(25)  # 26
     s(131)  # 132
     s(18)  # no print
-    # should_stop(True)
-    # t.join()
+    t.join()
 
 
 def tmain():

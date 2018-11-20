@@ -1,6 +1,7 @@
 from typing import TypeVar, Generic, List, Callable, Tuple, Any
 import asyncio
 import time
+import math
 
 T = TypeVar('T')
 S = TypeVar('S')
@@ -147,13 +148,17 @@ def clock(loop: asyncio.AbstractEventLoop = None,
     clk: Stream[float] = Stream(None)
     clk.clock = clk
 
-    async def feed_clock(time_res):
+    async def feed_clock(time_res, duration):
+        start = time.time()
         while True:
+            if time.time() - start > duration:
+                await loop.shutdown_asyncgens()
+                break
             clk(time.time())
             await asyncio.sleep(time_res)
 
-    def run():
-        loop.run_until_complete(feed_clock(time_res))
+    def run(duration=math.inf):
+        loop.run_until_complete(feed_clock(time_res, duration))
 
     return clk, run
 

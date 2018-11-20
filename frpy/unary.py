@@ -414,6 +414,34 @@ def fmap_async(fn: Callable[[AsyncIterator[T]], AsyncIterator[T]],
     """
     map async generator transformer fn to stream transformer
 
+    A running AbstractEventLoop is necessary. The most convenient way
+    is to use the clock offered by core.clock
+
+    >>> from frpy.api import Stream, clock
+    >>> async def transform(s):
+    ...     async for e in s:
+    ...         if e % 2 != 0:
+    ...             yield e + 1
+    >>> clk, tick = clock()
+    >>> s = Stream(clk)
+    >>> s1 = fmap_async(transform, s)
+    >>> footprint = []
+    >>> s1.hook = footprint.append
+    >>> import threading
+    >>> t = threading.Thread(target=tick, args=(0.01, ))  # Note
+    >>> t.start()
+    >>> s(1)
+    >>> s(10)
+    >>> s(25)
+    >>> s(131)
+    >>> s(18)
+    >>> t.join()
+    >>> footprint
+    [2, 26, 132]
+
+    *Note: terminating async routines right after events handled is very hard,
+    here just use a reasonable timeout*
+
     Parameters
     ----------
     fn : Callable[[AsyncIterator[T]], AsyncIterator[T]]
