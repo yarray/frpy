@@ -1,7 +1,3 @@
-"""
- .. testsetup::
-       from frpy.api import Stream
-"""
 from typing import TypeVar, Generic, List, Callable, Tuple, Any
 import asyncio
 import time
@@ -29,13 +25,10 @@ class Stream(Generic[T]):
     * s() to get current value
     * s(value) to push an event
 
-    Example
-    -------
-    Basic query/push operations
-
+    >>> # basic query/push operations
     >>> from frpy.api import Stream
     >>> s = Stream(None)
-    >>> s.trace = print
+    >>> s.hook = print
     >>> s(42)
     42
     >>> s()
@@ -46,11 +39,11 @@ class Stream(Generic[T]):
     11
     """
 
-    def __init__(self, clock, trace=None):
+    def __init__(self, clock, hook=None):
         self.value: T = None
         self.listeners: List[Callable[[Stream[T], T], None]] = []
-        self.clock = clock or self
-        self.trace = trace  # function to be call when setting value
+        self.clock = clock
+        self.hook = hook  # function to be call when setting value
 
     def __call__(self, value=None):
         """
@@ -68,8 +61,8 @@ class Stream(Generic[T]):
         """
 
         def update(*_):
-            if self.trace is not None:
-                self.trace(value)
+            if self.hook is not None:
+                self.hook(value)
             self.value = value
             self.listeners = [
                 f for f in self.listeners if not getattr(f, 'stale', False)
@@ -81,11 +74,12 @@ class Stream(Generic[T]):
             return self.value
 
         else:
-            if self.clock == self:
+            if self.clock is None or self.clock == self:
                 update()
             else:
                 self.clock.listeners.append(_once(update))
 
+    # TODO: delete
     def listen(self, notify: Callable[['Stream[T]', T], None]):
         if self.value is not None:
             notify(self, self.value)
@@ -96,12 +90,7 @@ def combine(fn: Callable[[List[Stream[Any]], Stream[T], Stream[Any], T], None],
             deps: List[Stream[Any]]) -> Stream[T]:
     """ Combine several upstream streams into a new one
 
-    Example
-    -------
-    Update
-    >>> clk = Stream(None)
-    >>> s1 = Stream(clk)
-    >>> s2 = Stream(clk)
+    For examples please check the source code in unary, multiary, timely, etc.
 
     Parameters
     ----------
@@ -117,9 +106,15 @@ def combine(fn: Callable[[List[Stream[Any]], Stream[T], Stream[Any], T], None],
     -------
     Stream[T]
     """
-    s: Stream[T] = Stream(deps[0].clock)
+    s: Stream[T] = Stream(None)
+    # propogate the upstream clock if only one clock is defined,
+    # otherwise the stream is orphan
+    if all(dep.clock == deps[0].clock for dep in deps
+           if dep.clock is not None):
+        s.clock = deps[0].clock
 
     def notify(src, value):
+        # TODO: change order, value is first
         s(fn(deps, s, src, value))
 
     for dep in deps:
@@ -150,6 +145,7 @@ def clock(loop: asyncio.AbstractEventLoop = None,
     """
     loop = loop or asyncio.get_event_loop()
     clk: Stream[float] = Stream(None)
+    clk.clock = clk
 
     async def feed_clock(time_block):
         while True:
@@ -157,9 +153,8 @@ def clock(loop: asyncio.AbstractEventLoop = None,
             await asyncio.sleep(time_block)
 
     def run():
-        loop.run_forever()
+        loop.run_until_complete(feed_clock(time_res))
 
-    asyncio.ensure_future(feed_clock(time_res), loop=loop)
     return clk, run
 
 

@@ -3,40 +3,27 @@ frpy: minimal functional reactive programming powered by modern python
 
 *Require python Python 3.6+*
 
-This module is heavily inspired by `flyd`_,
-with some important design decisions:
-
-1. The atomic update feature is not ported
-
-   The atomic update is quite useful but adds too much complexity in my
-   opinion, also the performance gain should not be too much since
-   the diamond style dependencies could be avoided in many scenarios.
-
-2. Racial conditions are handled by a central event loop, a.k.a a clock stream
-
-   Python unlike js has no event loop, and the new async API is not easy
-   to use in this case. We use the conception of clock when necessary
-   with asyncio event loops underhood. Per thread has its clock.
-
-3. No end stream mechanism is implemented
-
-   End streams are useful but may introduce too much dynamism and it has an
-   implact on the complexity ofimplementation. It may be added in the future
-   after thorough consideration.
+**FRP**, a.k.a. functional reactive programming is a programming paradigm to
+model time related system better. As a rather radical idea, FRP mainly exists
+in theoretical articles. But its (mental) concept is very useful in some
+cases and has been adopted partially in many tools like Elm or React among
+others. A comprehensive overview of different types of FRP can be found at
 
 Key concepts
 ------------
 
 **Stream** is a sequence of events. It could also be interpret as states
-changed stepwise. Continuous changing values like sin(x) over [0,
-1] is not within the scope unless the changing is sampled as discrete events.
+changed stepwise. Continuous changing values like sin(x) over [0, 1] is not
+within the scope unless the changing is sampled as discrete events. Each
+stream has a clock property, an *orphan* stream is a stream whose clock is
+None.
 
-**Clock** is the most important concept supporting the Stream to ensure
-thread-safety and greatly reduce the pain of concurrency. Clock is a special
-Stream whose ``clock`` property is itself. The simplest clock can be
-constructed by ``Stream(None)`` whose ``clock`` will be set to self, and the
-time value can then be injected manually. However, in most cases other than
-tests it's better to use the ``clock`` function to get a self-ticking clock.
+**Clock** is a stream whose clock is itself. Clock is the most important
+concept supporting the Stream to ensure thread-safety and greatly reduce the
+pain of concurrency. The simplest clock can be constructed by
+``Stream(None)`` whose ``clock`` will be set to self, and the time value can
+then be injected manually. However, in most cases other than tests it's
+better to use the ``clock`` function to get a self-ticking clock.
 
 Different clock will provide differents level of capabilities. All clock
 with increasing substractable values enables all operators, no matter the
@@ -45,14 +32,14 @@ values are real timestamp, natural numbers or event more complex structures
 non-increasing values will not support time sensitive operators like
 ``delay`` or ``timeout``.
 
-**FRP**, a.k.a. functional reactive programming is a programming paradigm to
-model time related system better. As a rather radical idea, FRP mainly exists
-in theoretical articles. But its (mental) concept is very useful in some
-cases and has been adopted partially in many tools like Elm or React among
-others. A comprehensive overview of different types of FRP can be found at
-
 Example
 -----------
+
+**clock-free style streams**
+
+TODO: add
+
+**Number accumulation with timeout**
 
 Numbers randomly spawn and accumulated. If the accumulated number reaches a
 certain value, output "met!" and start next try. If the accumulated number
@@ -91,9 +78,9 @@ Method 1: pure stream-style approach
     each(term, merge([met, interrupt]))
 
     # hook to print trace
-    acc.trace = print
-    met.trace = bind(print, 'met!')
-    interrupt.trace = bind(print, 'fail!')
+    acc.hook = print
+    met.hook = bind(print, 'met!')
+    interrupt.hook = bind(print, 'fail!')
 
     # start clock
     tick()
@@ -137,7 +124,7 @@ Method 2: more sequential approach with async generator
     res = fmap_async(fn, merge([clk, sp], ['clock', 'value']))
 
     # hook to print trace
-    res.trace = print
+    res.hook = print
     tick()
 
 Method 3: state reducer approach resembling React and Elm
@@ -180,6 +167,41 @@ Method 3: state reducer approach resembling React and Elm
 
 
 For detailed docs please refer to `API Doc`_.
+
+Note
+-----
+
+**Thread-safety**
+
+Injecting an event to a stream with a clock is thread-safe since all actions
+will be scheduled by its clock. Inject an event to an orphan stream is *NOT*
+thread-safe. Users have to be careful if use streams in a clock-free style.
+
+**Mix different clocks**
+
+**Attribution**
+
+This module is heavily inspired by `flyd`_,
+with some important design decisions:
+
+1. The atomic update feature is not ported
+
+   The atomic update is quite useful but adds too much complexity in my
+   opinion, also the performance gain should not be too much since
+   the diamond style dependencies could be avoided in many scenarios.
+
+2. Racial conditions are handled by a central event loop, a.k.a a clock stream
+
+   Python unlike js has no event loop, and the new async API is not easy
+   to use in this case. We use the conception of clock when necessary
+   with asyncio event loops underhood. Per thread has its clock.
+
+3. No end stream mechanism is implemented
+
+   End streams are useful but may introduce too much dynamism and it has an
+   implact on the complexity ofimplementation. It may be added in the future
+   after thorough consideration.
+
 
 .. _API Doc: https://frpy.readthedocs.io/en/latest/index.html
 .. _flyd: https://github.com/paldepind/flyd

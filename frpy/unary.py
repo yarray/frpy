@@ -1,8 +1,7 @@
 import time
-import math
 import asyncio
-from typing import Callable, TypeVar, Any, Generic, Union  # noqa F401
-from typing import Tuple, List, Dict, Deque, AsyncIterator, Awaitable, Deque, Iterator  # noqa F401
+from typing import Callable, TypeVar
+from typing import List, Dict, Deque, AsyncIterator
 from collections import deque
 from .core import Stream, combine
 
@@ -10,78 +9,18 @@ T = TypeVar('T')
 S = TypeVar('S')
 
 
-# constructors
-def repeat(interval: float, clock: Stream[T]) -> Stream[T]:
-    """ repeatedly inject unix timestamp
-
-    .. code-block:: python
-
-        # every 5 time units, inject current timestamp to s
-        clk, tick = clock()
-        s = repeat(5, clk)
-        tick()
-
-    Parameters
-    ----------
-    interval : float
-        interval between events
-    clock : Stream[T]
-        clock stream of world
-
-    Returns
-    -------
-    Stream[T]
-        every interval time units, inject clock event
-    """
-
-    def g(deps, this, src, value):
-        if this() is None or value - this() >= interval:
-            return value
-
-    return combine(g, [clock])
-
-
-def sequence(interval: float, it: Iterator[S], clock: Stream[T]) -> Stream[S]:
-    """ inject incremental numbers from 0
-
-    .. code-block:: python
-
-        # every 5 time units, inject 0, 1, 2, 3, ...
-        clk, tick = clock()
-        s = sequence(5, itertools.count(), clk)
-        tick()
-
-    Parameters
-    ----------
-    interval : float
-        interval between events
-    it : Iterator[S]
-        the iterator to generate values
-    clock : Stream[T]
-        clock stream of world
-
-    Returns
-    -------
-    Stream[S]
-        every interval time units, bumps an event
-    """
-    buffer = [clock()]
-
-    def g(deps, this, src, value):
-        if buffer[0] is None or value - buffer[0] >= interval:
-            try:
-                buffer[0] = value
-                return next(it)
-            except StopIteration:
-                pass
-
-    return combine(g, [clock])
-
-
-# combinators
 def fmap(fn: Callable[[T], S], s: Stream[T]) -> Stream[S]:
     """ apply function to every event of a stream
     map operator for Stream the functor
+
+    >>> # plus 3 to the varying value
+    >>> src = Stream(None)
+    >>> s = fmap(lambda x: x + 3, src)
+    >>> s.hook = print
+    >>> src(1)
+    4
+    >>> src(9)
+    12
 
     Parameters
     ----------
@@ -103,6 +42,17 @@ def fmap(fn: Callable[[T], S], s: Stream[T]) -> Stream[S]:
 
 def where(fn: Callable[[T], bool], s: Stream[T]) -> Stream[T]:
     """ preserve events making fn to be true
+
+    >>> # preserve only even number
+    >>> src = Stream(None)
+    >>> s = where(lambda x: x % 2 == 0, src)
+    >>> s.hook = print
+    >>> src(17)
+    >>> src(4)
+    4
+    >>> src(10)
+    10
+    >>> src(5)
 
     Parameters
     ----------
@@ -127,13 +77,22 @@ def scan(fn: Callable[[S, T], S], init: S, s: Stream[T]) -> Stream[S]:
     """ streams whose event is an accumulation created from the arrived event
     and the previous accumulation
 
+    >>> # add all numbers
+    >>> src = Stream(None)
+    >>> s = scan(lambda acc, x: acc + x, 0, src)
+    >>> s.hook = print
+    >>> src(12)
+    12
+    >>> src(30)
+    42
+
     Parameters
     ----------
     fn : Callable[[S, T], S]
         accumulate function, from previous accumulation and arrived event
         to result event
     init : S
-        initial value of the accumulation
+        initial value of the accumulation, if None, use first event as init
     s : Stream[T]
         source stream
 
@@ -141,41 +100,33 @@ def scan(fn: Callable[[S, T], S], init: S, s: Stream[T]) -> Stream[S]:
     -------
     Stream[S]
     """
-    buffer = [init]
 
     def g(deps, this, src, value):
-        buffer[0] = fn(buffer[0], value)
-        return buffer[0]
+        if this() is None:
+            return value if init is None else fn(init, value)
+        else:
+            return fn(this(), value)
 
     return combine(g, [s])
 
 
-def merge(ss: List[Stream[Any]], topics: List[Any] = None) -> Stream[Any]:
-    """ merge multiple streams
-
-    Parameters
-    ----------
-    ss : List[Stream[Any]]
-        streams to be merged
-    topics : List[Any], optional
-        if provided, events becomes tuples like (topic, original event),
-        the i-th topic is applied to the i-th stream
-
-    Returns
-    -------
-    Stream[Any]
-    """
-
-    def g(deps, this, src, value):
-        if topics is not None:
-            return (topics[ss.index(src)], value)
-        return value
-
-    return combine(g, ss)
-
-
 def window(n: int, s: Stream[T]) -> Stream[List[T]]:
     """ convert to stream of sliding windows of events
+
+    >>> # sliding window of width 3
+    >>> src = Stream(None)
+    >>> s = window(3, src)
+    >>> s.hook = print
+    >>> src(1)
+    [1]
+    >>> src(2)
+    [1, 2]
+    >>> src(3)
+    [1, 2, 3]
+    >>> src(4)
+    [2, 3, 4]
+    >>> src(5)
+    [3, 4, 5]
 
     Parameters
     ----------
@@ -200,6 +151,17 @@ def window(n: int, s: Stream[T]) -> Stream[List[T]]:
 def diff(fn: Callable[[T, T], S], init: T, s: Stream[T]) -> Stream[S]:
     """ stream of events generated using neighbouring events
 
+    >>> # later minus previous
+    >>> src = Stream(None)
+    >>> s = diff(lambda x, y: y - x, 0, src)
+    >>> s.hook = print
+    >>> src(3)
+    3
+    >>> src(5)
+    2
+    >>> src(11)
+    6
+
     Parameters
     ----------
     fn : Callable[[T, T], S]
@@ -218,15 +180,63 @@ def diff(fn: Callable[[T, T], S], init: T, s: Stream[T]) -> Stream[S]:
 
     def g(deps, this, src, value):
         last = buffer[0]
-        current = value
-        buffer[0] = current
-        return fn(last, current)
+        buffer[0] = value
+        if init is None and this() is None:
+            return value
+        return fn(last, value)
+
+    return combine(g, [s])
+
+
+def skip(n: int, s: Stream[T]) -> Stream[T]:
+    """ Skip first n events
+
+    >>> s = Stream(None)
+    >>> s2 = skip(2, s)
+    >>> s2.hook = print
+    >>> s(1)
+    >>> s(1)
+    >>> s(2)
+    2
+    >>> s(3)
+    3
+
+    Parameters
+    ----------
+    n : int
+        the number of events to skip
+    s : Stream[T]
+        source stream
+
+    Returns
+    -------
+    Stream[T]
+    """
+    buffer = [0]
+
+    def g(deps, this, src, value):
+        if buffer[0] < n:
+            buffer[0] += 1
+        else:
+            return value
 
     return combine(g, [s])
 
 
 def changed(eq_fn: Callable[[T, T], bool], s: Stream[T]) -> Stream[T]:
     """ output event when new event is different from the last
+
+    >>> # detect sharp increasing
+    >>> src = Stream(None)
+    >>> s = changed(lambda x, y: y - x <= 1, src)
+    >>> s.hook = print
+    >>> src(12)
+    12
+    >>> src(13)
+    >>> src(14)
+    >>> src(17)
+    17
+    >>> src(18)
 
     Parameters
     ----------
@@ -245,7 +255,7 @@ def changed(eq_fn: Callable[[T, T], bool], s: Stream[T]) -> Stream[T]:
         last = buffer[0]
         current = value
         buffer[0] = current
-        if not eq_fn(last, current):
+        if last is None or not eq_fn(last, current):
             return current
 
     return combine(g, [s])
@@ -256,6 +266,35 @@ def trace(key_fn: Callable[[T], S], stale: float,
     """ trace events with the same keys, from a mono stream
     to a stream of streams, each is a tracing stream generating
     when the first event with the key arrives
+
+    >>> # create sub streams for different ranges of values
+    >>> # every 10 create a stream, 1..10, 11..20 are two sub streams
+    >>> src = Stream(None)
+    >>> s = trace(lambda x: x // 10, 100, src)
+    >>> footprints = []
+    >>> def update_footprints(sub):
+    ...     i = len(footprints)
+    ...     footprints.append([sub()])
+    ...     sub.hook = footprints[i].append
+    >>> s.hook = update_footprints
+    >>> src(1)
+    >>> footprints
+    [[1]]
+    >>> src(21)
+    >>> footprints
+    [[1], [21]]
+    >>> src(2)
+    >>> footprints
+    [[1, 2], [21]]
+    >>> src(15)
+    >>> footprints
+    [[1, 2], [21], [15]]
+    >>> src(11)
+    >>> footprints
+    [[1, 2], [21], [15, 11]]
+    >>> src(7)
+    >>> footprints
+    [[1, 2, 7], [21], [15, 11]]
 
     Parameters
     ----------
@@ -296,6 +335,28 @@ def trace(key_fn: Callable[[T], S], stale: float,
 def flatten(ss: Stream[Stream[T]]) -> Stream[T]:
     """ redirect every event in stream of streams to a flattened stream
 
+    >>> # flatten a stream of streams
+    >>> s1 = Stream(None)
+    >>> s2 = Stream(None)
+    >>> s3 = Stream(None)
+    >>> ss = Stream(None)
+    >>> s = flatten(ss)
+    >>> footprint = []
+    >>> s.hook = footprint.append
+    >>> ss(s1)
+    >>> s1(1)
+    >>> s1(2)
+    >>> ss(s2)
+    >>> s1(3)
+    >>> s2(11)
+    >>> s2(12)
+    >>> ss(s3)
+    >>> s3(10)
+    >>> s1(4)
+    >>> s2(13)
+    >>> footprint
+    [1, 2, 3, 11, 12, 10, 4, 13]
+
     Parameters
     ----------
     ss : Stream[Stream[T]]
@@ -306,86 +367,29 @@ def flatten(ss: Stream[Stream[T]]) -> Stream[T]:
     Stream[T]
     """
     res: Stream[T] = Stream(ss.clock)
-    each(lambda s: s.listeners.append(lambda _, v: res(v)), ss)
-    return res
 
+    def on_new_substream(s):
+        s.listeners.append(lambda _, v: res(v))
+        # if sub stream has a different clock, dettach this stream
+        if s.clock != res.clock:
+            res.clock = res
 
-def timeout(t: float, responds: Stream[T], s: Stream[S]) -> Stream[float]:
-    """ inject a timeout event if t seconds pass after the last
-    event of the source stream and no event from the responding stream has
-    arrived, the source stream and the responding stream can be the same
-
-    Parameters
-    ----------
-    t : float
-        limit of elapsed time
-    responds : Stream[T]
-        responding stream to s
-    s : Stream[S]
-        source stream (request stream)
-
-    Returns
-    -------
-    Stream[float]
-        timestamps of timeout
-    """
-    buffer = [time.time()]
-    res: Stream[float] = Stream(s.clock)
-
-    def on_s(src, value):
-        buffer[0] = time.time()
-
-    def on_respond(src, value):
-        buffer[0] = None
-
-    def on_clock(clock, value):
-        if buffer[0] is not None and s.clock() - buffer[0] > t:
-            res(s.clock())
-            buffer[0] = None
-
-    responds.listen(on_respond)
-    s.clock.listen(on_clock)
-    s.listen(on_s)
-
-    return res
-
-
-def delay(t: float, s: Stream[T]) -> Stream[T]:
-    """ delay every events by specific time
-    when delayed t is 0, delay every events by a tick
-
-    Parameters
-    ----------
-    t : float
-        delayed seconds
-    s : Stream[T]
-        source stream
-
-    Returns
-    -------
-    Stream[T]
-    """
-    clock_buffer = [math.inf]
-    value_buffer = [None]
-    res: Stream[T] = Stream(s.clock)
-
-    def on_t(src, value):
-        if value - clock_buffer[0] >= t:
-            clock_buffer[0] = math.inf
-            res(value_buffer[0])
-
-    def on_s(src, value):
-        clock_buffer[0] = s.clock()
-        value_buffer[0] = value
-
-    s.clock.listen(on_t)
-    s.listen(on_s)
-
+    each(on_new_substream, ss)
     return res
 
 
 def each(fn: Callable[[T], None], s: Stream[T]) -> None:
     """ for each event perform an unpure action
+
+    >>> # for each to print
+    >>> s = Stream(None)
+    >>> each(print, s)
+    >>> s(1)
+    1
+    >>> s(5)
+    5
+    >>> s(11)
+    11
 
     Parameters
     ----------

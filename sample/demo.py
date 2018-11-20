@@ -25,7 +25,7 @@ def main():
     sm = merge([spuf, sns])
     ss = trace(lambda x: x % 2, 9999, sm)
     sst = flatten(fmap(lambda s: diff(lambda x, y: y - x, 0, s), ss))
-    sst.trace = print
+    sst.hook = print
     sp(2)
     sp(1)
     sp(1)
@@ -33,7 +33,7 @@ def main():
     sstop = fmap(lambda _: 'stop', repeat(5, clk))
     sto = timeout(1.5, sstop, sn)
     events = merge([sn, sstop, sto])
-    events.trace = print
+    events.hook = print
 
     tick()
 
@@ -49,8 +49,35 @@ def amain():
                 yield e * 2
 
     sp2 = fmap_async(mult2, sp)
-    sp2.trace = print
+    sp2.hook = print
     tick()
+
+
+async def transform(s):
+    async for e in s:
+        if e % 2 != 0:
+            yield e + 1
+
+
+def amain_stop():
+    # TODO: can demo, but very hard to test since finite clock cannot
+    # gurantee all events are triggered
+    # should_stop = Stream(None)
+    # clk, tick = clock(should_stop=should_stop)
+    # s = Stream(clk)
+    s = Stream(None)
+    s1 = fmap_async(transform, s)
+    s1.hook = print
+    # import threading
+    # t = threading.Thread(target=tick)
+    # t.start()
+    s(1)  # 2
+    s(10)  # no print
+    s(25)  # 26
+    s(131)  # 132
+    s(18)  # no print
+    # should_stop(True)
+    # t.join()
 
 
 def tmain():
@@ -109,9 +136,9 @@ def compl():
     each(term, merge([met, interrupt]))
 
     # hook to print trace
-    acc.trace = print
-    met.trace = bind(print, 'met!')
-    interrupt.trace = bind(print, 'fail!')
+    acc.hook = print
+    met.hook = bind(print, 'met!')
+    interrupt.hook = bind(print, 'fail!')
 
     # start clock
     tick()
@@ -145,7 +172,7 @@ def compl2():
     res = fmap_async(fn, merge([clk, sp], ['clock', 'value']))
 
     # hook to print trace
-    res.trace = print
+    res.hook = print
     tick()
 
 
@@ -194,15 +221,16 @@ def action_q():
     sp = fmap(const(('value', 1)), repeat(0.4, clk))
     each(events, sp)
     states = scan(update, 0, events)
-    states.trace = print
+    states.hook = print
     tick()
 
 
 if __name__ == '__main__':
     # main()
     # amain()
+    amain_stop()
     # tmain()
     # compl()
     # compl2()
-    compl3()
+    # compl3()
     # action_q()

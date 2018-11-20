@@ -1,4 +1,6 @@
 from frpy.api import Stream
+from frpy.core import combine
+from helper import record
 
 
 def test_event_order():
@@ -14,3 +16,20 @@ def test_event_order():
     s2.listen(lambda _, x2: s3(x2))
     clk(1)
     assert trace == [1, 11]
+
+
+def test_combine_deps():
+    # Sum two stream values when either changes
+    s1 = Stream(None)
+    s2 = Stream(None)
+
+    def sum_upstreams(deps, s, src, value):
+        return sum(dep() for dep in deps if dep() is not None)
+
+    s = record(combine(sum_upstreams, [s1, s2]))
+    s1(1)
+    s2(3)
+    s1(2)
+    s1(5)
+    s2(6)
+    assert s.footprint == [1, 4, 5, 8, 11]
