@@ -80,12 +80,6 @@ class Stream(Generic[T]):
             else:
                 self.clock.listeners.append(_once(update))
 
-    # TODO: delete
-    def listen(self, notify: Callable[['Stream[T]', T], None]):
-        if self.value is not None:
-            notify(self, self.value)
-        self.listeners.append(notify)
-
 
 def combine(fn: Callable[[List[Stream[Any]], Stream[T], Stream[Any], T], None],
             deps: List[Stream[Any]]) -> Stream[T]:
@@ -115,7 +109,6 @@ def combine(fn: Callable[[List[Stream[Any]], Stream[T], Stream[Any], T], None],
         s.clock = deps[0].clock
 
     def notify(src, value):
-        # TODO: change order, value is first
         s(fn(deps, s, src, value))
 
     for dep in deps:
@@ -161,8 +154,3 @@ def clock(loop: asyncio.AbstractEventLoop = None,
         loop.run_until_complete(feed_clock(time_res, duration))
 
     return clk, run
-
-
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()

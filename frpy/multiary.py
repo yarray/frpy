@@ -7,6 +7,7 @@ S = TypeVar('S')
 
 def merge(ss: List[Stream[Any]], topics: List[Any] = None) -> Stream[Any]:
     """ merge multiple streams
+
     >>> t = []
     >>> s1 = Stream(None)
     >>> s2 = Stream(None)

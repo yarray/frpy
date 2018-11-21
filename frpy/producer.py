@@ -8,12 +8,20 @@ S = TypeVar('S')
 def repeat(interval: float, clock: Stream[T]) -> Stream[T]:
     """ repeatedly inject unix timestamp
 
-    .. code-block:: python
-
-        # every 5 time units, inject current timestamp to s
-        clk, tick = clock()
-        s = repeat(5, clk)
-        tick()
+    >>> clk = Stream(None)
+    >>> clk.clock = clk
+    >>> s = repeat(3, clk)
+    >>> s.hook = print
+    >>> clk(0)
+    0
+    >>> clk(1)
+    >>> clk(2)
+    >>> clk(3)
+    3
+    >>> clk(4)
+    >>> clk(5)
+    >>> clk(6)
+    6
 
     Parameters
     ----------
@@ -36,14 +44,22 @@ def repeat(interval: float, clock: Stream[T]) -> Stream[T]:
 
 
 def sequence(interval: float, it: Iterator[S], clock: Stream[T]) -> Stream[S]:
-    """ inject incremental numbers from 0
+    """ inject next item in iterator
 
-    .. code-block:: python
-
-        # every 5 time units, inject 0, 1, 2, 3, ...
-        clk, tick = clock()
-        s = sequence(5, itertools.count(), clk)
-        tick()
+    >>> clk = Stream(None)
+    >>> clk.clock = clk
+    >>> s = sequence(3, iter(range(5, 10, 2)), clk)
+    >>> s.hook = print
+    >>> clk(0)
+    5
+    >>> clk(1)
+    >>> clk(2)
+    >>> clk(3)
+    7
+    >>> clk(4)
+    >>> clk(5)
+    >>> clk(6)
+    9
 
     Parameters
     ----------

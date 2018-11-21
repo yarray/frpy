@@ -301,7 +301,8 @@ def trace(key_fn: Callable[[T], S], stale: float,
     key_fn : Callable[[T], S]
         function to generate key from the event
     stale : float
-        the seconds before a stream gets trimmed if no events arrived
+        the seconds before a stream gets trimmed if no events arrived,
+        works with real time no matter which lock is provided
     s : Stream[T]
         source stream
 
@@ -315,10 +316,10 @@ def trace(key_fn: Callable[[T], S], stale: float,
     def g(deps, this, src, value):
         key = key_fn(value)
         # truncate staled sub streams
-        for k, t in updated_at.items():
+        for k, t in list(updated_at.items()):
             if time.time() - t > stale:
-                del buffer[key]
-                del updated_at[key]
+                del buffer[k]
+                del updated_at[k]
         if key not in buffer.keys():
             s = Stream(deps[0].clock)
             buffer[key] = s
@@ -370,9 +371,6 @@ def flatten(ss: Stream[Stream[T]]) -> Stream[T]:
 
     def on_new_substream(s):
         s.listeners.append(lambda _, v: res(v))
-        # if sub stream has a different clock, dettach this stream
-        if s.clock != res.clock:
-            res.clock = res
 
     each(on_new_substream, ss)
     return res
@@ -428,7 +426,7 @@ def fmap_async(fn: Callable[[AsyncIterator[T]], AsyncIterator[T]],
     >>> footprint = []
     >>> s1.hook = footprint.append
     >>> import threading
-    >>> t = threading.Thread(target=tick, args=(0.01, ))  # Note
+    >>> t = threading.Thread(target=tick, args=(0.1, ))  # Note
     >>> t.start()
     >>> s(1)
     >>> s(10)
@@ -460,7 +458,7 @@ def fmap_async(fn: Callable[[AsyncIterator[T]], AsyncIterator[T]],
     def notify(src, value):
         q.put_nowait(value)
 
-    s.listen(notify)
+    s.listeners.append(notify)
 
     async def a_src():
         while True:
@@ -472,8 +470,3 @@ def fmap_async(fn: Callable[[AsyncIterator[T]], AsyncIterator[T]],
 
     asyncio.ensure_future(a_res())
     return res
-
-
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()

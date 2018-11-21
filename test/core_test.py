@@ -10,10 +10,10 @@ def test_event_order():
     s1 = Stream(clk)
     s2 = Stream(clk)
     s3 = Stream(clk, trace.append)
-    clk.listen(lambda _, t: s1(t))
-    s1.listen(lambda _, x1: s2(x1 + 10))
-    s1.listen(lambda _, x1: s3(x1))
-    s2.listen(lambda _, x2: s3(x2))
+    clk.listeners.append(lambda _, t: s1(t))
+    s1.listeners.append(lambda _, x1: s2(x1 + 10))
+    s1.listeners.append(lambda _, x1: s3(x1))
+    s2.listeners.append(lambda _, x2: s3(x2))
     clk(1)
     assert trace == [1, 11]
 
@@ -26,8 +26,9 @@ def test_combine_deps():
     def sum_upstreams(deps, s, src, value):
         return sum(dep() for dep in deps if dep() is not None)
 
-    s = record(combine(sum_upstreams, [s1, s2]))
+    # existing value will also be pushed
     s1(1)
+    s = record(combine(sum_upstreams, [s1, s2]))
     s2(3)
     s1(2)
     s1(5)

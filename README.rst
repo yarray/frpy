@@ -7,7 +7,14 @@ frpy: minimal functional reactive programming powered by modern python
 model time related system better. As a rather radical idea, FRP mainly exists
 in theoretical articles. But its (mental) concept is very useful in some
 cases and has been adopted partially in many tools like Elm or React among
-others. A comprehensive overview of different types of FRP can be found at
+others. Among other libraries, frpy is:
+
+* super lightweight, core part is merely 64 lines of code without comments.
+* carefully designed clock system, support both clock free style and streams
+  running in real world time
+* totally thread-safe given a clock exits
+* take advantage of async python, allowing near-sequential style style with
+  `fmap_async`
 
 Key concepts
 ------------
@@ -25,7 +32,7 @@ pain of concurrency. The simplest clock can be constructed by
 then be injected manually. However, in most cases other than tests it's
 better to use the ``clock`` function to get a self-ticking clock.
 
-Different clock will provide differents level of capabilities. All clock
+Different clocks will provide different levels of capabilities. All clock
 with increasing substractable values enables all operators, no matter the
 values are real timestamp, natural numbers or event more complex structures
 (though the time unit differs). Clocks with non-substractable or
@@ -35,11 +42,47 @@ non-increasing values will not support time sensitive operators like
 Example
 -----------
 
-**clock-free style streams**
+**Clock-free style streams**
 
-TODO: add
+.. code-block:: python
 
-**Number accumulation with timeout**
+    from frpy.api import Stream, fmap, where, merge
+
+    # even items from s1 merged with s2
+    s1 = Stream(None)
+    s2 = Stream(None)
+    s3 = fmap(where(lambda x: x % 2 == 0, s1))
+    s4 = merge([s2, s3])
+    s1(1)
+    s1(2)
+    s1(3)
+    s2(10)
+    s1(4)
+    s2(9)
+    s1(5)
+    s1(6)
+    # The footprint of s4 is: 2, 10, 4, 9, 6
+
+**Streams with manual clock**
+
+.. code-block:: python
+
+    # even items from s1 delayed by 2 time units
+    clk = Stream(None)
+    clk.clock = clk
+    src = Stream(clk)
+    s = delay(2, src)
+    s.hook = print
+    src(0)
+    clk(0)  # src will be set here (the next clock tick)
+    src(1)
+    clk(1)
+    clk(2)  # s will get 0
+    clk(3)  # s will get nothing since value 1 is odd
+    clk(4)  # s will get 2
+
+
+**Complex case: number accumulation with timeout**
 
 Numbers randomly spawn and accumulated. If the accumulated number reaches a
 certain value, output "met!" and start next try. If the accumulated number
@@ -177,7 +220,17 @@ Injecting an event to a stream with a clock is thread-safe since all actions
 will be scheduled by its clock. Inject an event to an orphan stream is *NOT*
 thread-safe. Users have to be careful if use streams in a clock-free style.
 
-**Mix different clocks**
+**Clock compatiblities**
+
+Frpy will try its best to construct compatible streams. For unary operators,
+clock will always be proporgated. This also means that orphan streams will
+always derives orphan streams. For multiary operators like merge, if all
+non-orphan upstreams have the same clock, inherit that clock, otherwise
+dettach the stream to be orphan to avoid problems. This behavior is
+implemented in the ``combine``. It is highly recommended to avoid mixing
+clocks or do that only if with good reason, and always manually set the
+derived stream's clock.
+
 
 **Attribution**
 
@@ -205,3 +258,4 @@ with some important design decisions:
 
 .. _API Doc: https://frpy.readthedocs.io/en/latest/index.html
 .. _flyd: https://github.com/paldepind/flyd
+.. _Wikipedia: https://en.wikipedia.org/wiki/Functional_reactive_programming
