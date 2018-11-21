@@ -16,6 +16,8 @@ others. Among other libraries, frpy is:
 * take advantage of async python, allowing near-sequential style style with
   `fmap_async`
 
+Full documentation can be found at `API Doc`_.
+
 Key concepts
 ------------
 
@@ -218,7 +220,7 @@ Note
 **Thread-safety**
 
 Injecting an event to a stream with a clock is thread-safe since all actions
-will be scheduled by its clock. Inject an event to an orphan stream is *NOT*
+will be scheduled by its clock. Injecting an event to an orphan stream is *NOT*
 thread-safe. Users have to be careful if use streams in a clock-free style.
 
 **Clock compatiblities**
