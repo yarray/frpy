@@ -53,14 +53,15 @@ Example
     s2 = Stream(None)
     s3 = fmap(where(lambda x: x % 2 == 0, s1))
     s4 = merge([s2, s3])
+    s4.hook = print
     s1(1)
-    s1(2)
+    s1(2)  # 2
     s1(3)
-    s2(10)
-    s1(4)
-    s2(9)
+    s2(10)  # 10
+    s1(4)  # 4
+    s2(9)  # 9
     s1(5)
-    s1(6)
+    s1(6)  # 6
     # The footprint of s4 is: 2, 10, 4, 9, 6
 
 **Streams with manual clock**
@@ -77,9 +78,9 @@ Example
     clk(0)  # src will be set here (the next clock tick)
     src(1)
     clk(1)
-    clk(2)  # s will get 0
-    clk(3)  # s will get nothing since value 1 is odd
-    clk(4)  # s will get 2
+    clk(2)  # 0
+    clk(3)  # empty since value 1 is odd
+    clk(4)  # 2
 
 
 **Complex case: number accumulation with timeout**
