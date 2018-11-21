@@ -7,7 +7,7 @@ frpy: minimal functional reactive programming powered by modern python
 model time related system better. As a rather radical idea, FRP mainly exists
 in theoretical articles. But its (mental) concept is very useful in some
 cases and has been adopted partially in many tools like Elm or React among
-others. Among other libraries, frpy is:
+others. Comparing to other python frp libraries, frpy is:
 
 * super lightweight, core part is merely 64 lines of code without comments.
 * carefully designed clock system, support both clock free style and streams
