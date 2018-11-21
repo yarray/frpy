@@ -1,7 +1,7 @@
 frpy: minimal functional reactive programming powered by modern python
 ================================================================================
 
-*Require python Python 3.6+*
+*Require python 3.6+*
 
 **FRP**, a.k.a. functional reactive programming is a programming paradigm to
 model time related system better. As a rather radical idea, FRP mainly exists
