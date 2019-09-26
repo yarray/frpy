@@ -5,6 +5,6 @@ setup(
     version='0.1',
     packages=['frpy'],
     license='',
-    long_description=open('README.md').read(),
+    long_description=open('README.rst').read(),
     install_requires=[],
 )
