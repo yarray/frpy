@@ -137,11 +137,10 @@ def clock(loop: asyncio.AbstractEventLoop = None,
     Tuple[Stream[float], Callable[[], None]]
         A clock stream and a function to start the clock (run forever)
     """
-    loop = loop or asyncio.get_event_loop()
     clk: Stream[float] = Stream(None)
     clk.clock = clk
 
-    async def feed_clock(time_res, duration):
+    async def feed_clock(time_res, duration, loop):
         start = time.time()
         while True:
             if time.time() - start > duration:
@@ -151,6 +150,7 @@ def clock(loop: asyncio.AbstractEventLoop = None,
             await asyncio.sleep(time_res)
 
     def run(duration=math.inf):
-        loop.run_until_complete(feed_clock(time_res, duration))
+        loop = loop or asyncio.get_event_loop()()
+        get_loop().run_until_complete(feed_clock(time_res, duration, loop))
 
     return clk, run
