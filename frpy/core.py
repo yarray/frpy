@@ -9,7 +9,6 @@ S = TypeVar('S')
 
 def _once(f: Callable, cond=lambda *_: True):
     ''' make the function as stale after it's called extractly once '''
-
     def g(*args, **kw):
         if cond(*args, **kw):
             f(*args, **kw)
@@ -39,7 +38,6 @@ class Stream(Generic[T]):
     10
     11
     """
-
     def __init__(self, clock, hook=None):
         self.value: T = None
         self.listeners: List[Callable[[Stream[T], T], None]] = []
@@ -60,7 +58,6 @@ class Stream(Generic[T]):
         2. All events triggered by one tick will happen in THAT tick prior
         to the subsequent tick so that concurrency issues will not bother.
         """
-
         def update(*_):
             if self.hook is not None:
                 self.hook(value)
@@ -119,8 +116,7 @@ def combine(fn: Callable[[List[Stream[Any]], Stream[T], Stream[Any], T], None],
     return s
 
 
-def clock(loop: asyncio.AbstractEventLoop = None,
-          time_res=0) -> Tuple[Stream[float], Callable[[], None]]:
+def clock() -> Tuple[Stream[float], Callable[[], None]]:
     """ create a clock stream producing the real world time,
     using an infinite async loop
 
@@ -149,8 +145,10 @@ def clock(loop: asyncio.AbstractEventLoop = None,
             clk(time.time())
             await asyncio.sleep(time_res)
 
-    def run(duration=math.inf):
-        loop = loop or asyncio.get_event_loop()()
-        get_loop().run_until_complete(feed_clock(time_res, duration, loop))
+    def run(time_res=0,
+            duration=math.inf,
+            loop: asyncio.AbstractEventLoop = None):
+        loop = loop or asyncio.get_event_loop()
+        loop.run_until_complete(feed_clock(time_res, duration, loop))
 
     return clk, run

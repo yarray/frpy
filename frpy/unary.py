@@ -426,7 +426,8 @@ def fmap_async(fn: Callable[[AsyncIterator[T]], AsyncIterator[T]],
     >>> footprint = []
     >>> s1.hook = footprint.append
     >>> import threading
-    >>> t = threading.Thread(target=tick, args=(0.1, ))  # Note
+    >>> loop = asyncio.get_event_loop()
+    >>> t = threading.Thread(target=tick, kwargs={'duration': 0.1, 'loop': loop})  # Note
     >>> t.start()
     >>> s(1)
     >>> s(10)
