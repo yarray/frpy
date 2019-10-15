@@ -376,6 +376,36 @@ def flatten(ss: Stream[Stream[T]]) -> Stream[T]:
     return res
 
 
+def once(fn: Callable[[T], None], s: Stream[T]) -> None:
+    """ run once on tick, clock can act as msg queue with this
+
+    >>> s = Stream(None)
+    >>> once(print, s)
+    >>> s(1)
+    1
+    >>> s(3)
+    >>> s(6)
+
+    Parameters
+    ----------
+    fn : Callable[[T], None]
+        the action
+    s : Stream[T]
+        source stream
+
+    Returns
+    -------
+    None
+    """
+
+    # create new function since we cannot set stale to built in function
+    def g(_, value):
+        fn(value)
+        g.stale = True
+
+    s.listeners.append(g)
+
+
 def each(fn: Callable[[T], None], s: Stream[T]) -> None:
     """ for each event perform an unpure action
 
